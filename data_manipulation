@@ -1,0 +1,38 @@
+#---------------------------------
+# Format number as fixed width, with leading zeros 
+#---------------------------------
+
+# Python string method : zfill(width)
+# zfill(width) : 문자열을 매개변수 width만큼 길이로 만들되, 추가로 필요한 자리수만큼 '0'을 채움
+
+# reference : http://www.datamarket.kr/xe/index.php?mid=board_ecko11&document_srl=519&listStyle=viewer
+
+# making a sample DataFrame
+df <- data.frame(var1 = c(1, 2, 11, 12, 101, 102))
+df
+
+# (1) sprintf(%03d, var) : Format number as fixed width, with leading zeros 
+df$var2 <- sprintf("%03d", df$var1)
+df
+
+df$var3 <- paste("ID", sprintf("%03d", df$var1), sep="_")
+df
+
+df$var4 <- sprintf("ID_%03d", df$var1)
+df
+
+
+# (2) sprintf("%f", x)
+sprintf("%f", 2.7182818284)
+
+sprintf("%.0f", 2.7182818284)
+sprintf("%.1f", 2.7182818284)
+sprintf("%.2f", 2.7182818284)
+sprintf("%.3f", 2.7182818284)
+sprintf("%.10f", 2.7182818284)
+
+sprintf("%1.1f", 2.7182818284)
+sprintf("%2.1f", 2.7182818284)
+sprintf("%3.1f", 2.7182818284)
+sprintf("%10.1f", 2.7182818284)
+
