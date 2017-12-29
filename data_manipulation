@@ -36,3 +36,79 @@ sprintf("%2.1f", 2.7182818284)
 sprintf("%3.1f", 2.7182818284)
 sprintf("%10.1f", 2.7182818284)
 
+
+> #---------------------------------
+> # Format number as fixed width, with leading zeros 
+> #---------------------------------
+> 
+> # Python string method : zfill(width)
+> # zfill(width) : 문자열을 매개변수 width만큼 길이로 만들되, 추가로 필요한 자리수만큼 '0'을 채움
+> 
+> # reference : http://www.datamarket.kr/xe/index.php?mid=board_ecko11&document_srl=519&listStyle=viewer
+> 
+> # making a sample DataFrame
+> df <- data.frame(var1 = c(1, 2, 11, 12, 101, 102))
+> df
+  var1
+1    1
+2    2
+3   11
+4   12
+5  101
+6  102
+> 
+> # (1) sprintf(%03d, var) : Format number as fixed width, with leading zeros 
+> df$var2 <- sprintf("%03d", df$var1)
+> df
+  var1 var2
+1    1  001
+2    2  002
+3   11  011
+4   12  012
+5  101  101
+6  102  102
+> 
+> df$var3 <- paste("ID", sprintf("%03d", df$var1), sep="_")
+> df
+  var1 var2   var3
+1    1  001 ID_001
+2    2  002 ID_002
+3   11  011 ID_011
+4   12  012 ID_012
+5  101  101 ID_101
+6  102  102 ID_102
+> 
+> df$var4 <- sprintf("ID_%03d", df$var1)
+> df
+  var1 var2   var3   var4
+1    1  001 ID_001 ID_001
+2    2  002 ID_002 ID_002
+3   11  011 ID_011 ID_011
+4   12  012 ID_012 ID_012
+5  101  101 ID_101 ID_101
+6  102  102 ID_102 ID_102
+> 
+> 
+> # (2) sprintf("%f", x)
+> sprintf("%f", 2.7182818284)
+[1] "2.718282"
+> 
+> sprintf("%.0f", 2.7182818284)
+[1] "3"
+> sprintf("%.1f", 2.7182818284)
+[1] "2.7"
+> sprintf("%.2f", 2.7182818284)
+[1] "2.72"
+> sprintf("%.3f", 2.7182818284)
+[1] "2.718"
+> sprintf("%.10f", 2.7182818284)
+[1] "2.7182818284"
+> 
+> sprintf("%1.1f", 2.7182818284)
+[1] "2.7"
+> sprintf("%2.1f", 2.7182818284)
+[1] "2.7"
+> sprintf("%3.1f", 2.7182818284)
+[1] "2.7"
+> sprintf("%10.1f", 2.7182818284)
+[1] "       2.7"
