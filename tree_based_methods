@@ -1,0 +1,247 @@
+##-----------------------------------------------------
+## Tree-Based Methods
+## Reference: An Introduction to Statistical Learning w/ Applications in R
+##-----------------------------------------------------
+
+# loading {tree} library
+install.packages("tree")
+library(tree)
+
+# Carseats dataset
+library(ISLR)
+str(Carseats)
+head(Carseats)
+
+## ---------
+## 1. Fitting Classification Trees
+# EDA
+hist(Carseats$Sales, breaks=20)
+summary(Carseats$Sales)
+
+Carseats <- transform(Carseats, High = ifelse(Sales<=8, "No", "Yes"))
+table(Carseats$High)
+
+# building tree model with whole data set (w/o spliting training, test set)
+tree.carseats <- tree(High ~ .-Sales, data=Carseats)
+summary(tree.carseats)
+
+# visualization: plot(), text()
+plot(tree.carseats)
+text(tree.carseats, pretty=0)
+
+tree.carseats
+
+# splitting into training, test sets
+set.seed(2)
+train <- sample(1:nrow(Carseats), 200)
+Carseats.test <- Carseats[-train,]
+
+# building model with training set
+tree.carseats <- tree(High ~ . - Sales, data = Carseats, subset = train)
+plot(tree.carseats)
+text(tree.carseats, pretty = 0)
+
+# evaluating model performance with test set
+tree.pred <- predict(tree.carseats, data=Carseats.test, type="class")
+table(Carseats.test$High, tree.pred)
+(73+33)/200 # accuracy
+
+# pruning the tree w/ CV: cost complexity pruning
+set.seed(3)
+cv.carseats <- cv.tree(tree.carseats, FUN=prune.misclass) # cost complexity pruning
+names(cv.carseats) # "size"   "dev"    "k"      "method"
+cv.carseats # 'dev' corresponds to the cross-validation error rate
+
+# visualization
+par(mfrow=c(1,2))
+plot(cv.carseats$size, cv.carseats$dev, type="b") # no. of terminal nodes of each tree considered
+plot(cv.carseats$k, cv.carseats$dev, type="b") # value of the cost-complexity parameter used
+
+# pruning the tree to obtain the nine-node tree using prune.misclass() function
+prune.carseats <- prune.misclass(tree.carseats, best=9)
+par(mfrow=c(1,1))
+plot(prune.carseats) # tree plot after pruning
+text(prune.carseats, pretty=0)
+
+# evaluate the test set performance using predict() function
+tree.pred <- predict(prune.carseats, data =  Carseates, type = "class")
+table(Carseats.test$High, tree.pred)
+(74+27)/200 # accuracy
+
+rm(list=ls()) # delete all
+
+## ----------
+## 2. Fitting Regression Trees: Single Tree
+
+# loading 'Boston' data.frame from MASS package
+library(MASS)
+Boston <- Boston
+str(Boston)
+head(Boston)
+hist(Boston$medv) # medv: median value of owner-occupied homes in \$1000s
+
+# fitting regression trees using tree() function
+set.seed(1)
+train <- sample(1:nrow(Boston), nrow(Boston)/2)
+tree.boston <- tree(medv ~ ., data = Boston, subset = train)
+summary(tree.boston)
+
+  # -- lstat: lower status of the population (percent)
+  # -- rm: average number of rooms per dwelling
+  # -- dis: weighted mean of distances to five Boston employment centres
+
+# plot
+plot(tree.boston)
+text(tree.boston, pretty = 0)
+
+# Cross-Validation to see whether pruning the tree will improve performace
+cv.boston <- cv.tree(tree.boston) # CV for choosing tree complexity
+plot(cv.boston$size, cv.boston$dev, type='b')
+
+# pruning the tree using prune.tree() function
+prune.boston <- prune.tree(tree.boston, best=7)
+plot(prune.boston)
+text(prune.boston, pretty = 0)
+
+# prediction on the test set
+medv_pred <- predict(prune.boston, newdata=Boston[-train,])
+boston.test <- Boston[-train, "medv"]
+
+# plot
+plot(medv_pred, boston.test)
+abline(0, 1) # the intercept and slope
+
+# MSE, RMSE
+mean((medv_pred - boston.test)^2) # MSE
+sqrt(mean((medv_pred - boston.test)^2)) # RMSE (square root of the MSE)
+
+rm(list=ls())
+
+
+## ----------
+## 3-1. Bagging (and Random Forest)
+# bagging is simply a special case of a random forest with m=p
+
+library(MASS)
+str(Boston)
+
+# loading 'randomForest' library
+install.packages("randomForest")
+library(randomForest)
+
+# splitting the training, test set
+set.seed(1)
+train <- sample(1:nrow(Boston), nrow(Boston)/2)
+boston.test <- Boston[-train, "medv"]
+
+# fitting bagging model with training set
+bag.boston <- randomForest(medv ~ ., 
+                           data = Boston, 
+                           subset = train, 
+                           mtry = 13, # all 13 predictors is considered for each split of tree, ie. bagging
+                           ntree = 500, # the number of trees
+                           importance = TRUE)
+
+bag.boston
+
+# evaluation of bagging model performance using test set
+yhat.bag <- predict(bag.boston, newdata = Boston[-train, ])
+
+# plot 
+plot(yhat.bag, boston.test)
+abline(0, 1)
+
+# MSE, RMSE
+mean((yhat.bag - boston.test)^2) # MSE
+sqrt(mean((yhat.bag - boston.test)^2)) # RMSE
+
+# variable importance
+importance(bag.boston)
+
+barplot(bag.boston$importance[,1], 
+        main = "Variable Importance by %IncMSE")
+
+barplot(importance(bag.boston)[,2], 
+        main = "Variable Importance by IncNodePurity")
+
+
+## ----------
+## 3-2. Random Forest
+
+set.seed(1)
+rf.boston <- randomForest(medv ~ ., 
+                          data = Boston, 
+                          subset = train, 
+                          mtry = 5, # regression trees: p/3, classificaton trees: sqrt(p)
+                          ntree = 500, 
+                          importance = TRUE) 
+
+# evaluating the model performance with test set
+yhat.rf <- predict(rf.boston, newdata = Boston[-train, ])
+
+# plot
+plot(yhat.rf, boston.test)
+abline(0, 1)
+
+# MSE, RMSE
+mean((yhat.rf - boston.test)^2) # MSE
+sqrt(mean((yhat.tf - boston.test)^2)) # RMSE
+
+# variable importance
+importance(rf.boston)
+
+varImpPlot(rf.boston) # plot of %IncMSE, IncNodePurity
+
+barplot(importance(rf.boston)[,1], 
+        main = "Variable Importance by %IncMSE")
+  # the mean decrease of accuracy in predictions on the out of bag samples 
+  # when a given variable is exclued from the medel
+
+barplot(importance(rf.boston)[,2], 
+        main = "Variable Importance by IncNodePurity")
+  # the total decrease in node imputiry that results from splits over that variable
+  # averaged over all trees
+
+rm(list=ls())
+
+
+## ----------
+## 4. Boosting
+
+# install & loading gbm library
+install.packages("gbm") # Generalized Boosted Regression Modeling
+library(gbm)
+
+# sampling: training, test set
+set.seed(1)
+train <- sample(1:nrow(Boston), nrow(Boston)/2)
+boston.test <- Boston[-train, "medv"]
+
+# fitting boosting model using gbm() function
+boost.boston <- gbm(medv ~ ., 
+                    data = Boston[train, ], 
+                    distribution = "gaussian", # regression: "gaussian", classification: "bernoulli"
+                    n.trees = 5000, # the number of trees
+                    interaction.depth = 4,  # the depth of each tree
+                    shrinkage = 0.01, # shrinkage parameter lamda (default value = 0.001)
+                    verbose = F)
+
+# summary statistic and variance importance(Relative influence) plot
+summary(boost.boston)
+
+# partial dependence plots for 'rm', 'lstat' variables
+# -- the marginal effect of the selected variables 
+# -- on the response after integrating out the other variables
+par(mfrow = c(1, 2))
+plot(boost.boston, i = "rm")
+plot(boost.boston, i = "lstat")
+par(mfrow = c(1, 1))
+
+# prediction with test set
+yhat.boost <- predict(boost.boston, 
+                      newdata = Boston[-train, ], 
+                      n.trees = 5000)
+
+# MSE, RMSE
+mean((yhat.boost - boston.test)^2) # MSE
+sqrt(mean((yhat.boost - boston.test)^2)) # RMSE
