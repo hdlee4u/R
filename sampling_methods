@@ -1,9 +1,10 @@
 ##---------------------------------------------------
 ## Resampling Methods
 ## Cross-Validation and the Bootstrap
-## Reference: An introduction to statistical learning 
-##            with application in R
+## Reference: An introduction to statistical learning with applications in R
 ##---------------------------------------------------
+
+rm(list=ls())
 
 # loading library and data
 install.packages("ISLR")
