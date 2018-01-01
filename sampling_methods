@@ -145,16 +145,3 @@ boot.fn <- function(data, index) {
 
 set.seed(1)
 boot(data=Auto, statistic=boot.fn, R=1000)
-
-'ORDINARY NONPARAMETRIC BOOTSTRAP
-
-
-Call:
-boot(data = Auto, statistic = boot.fn, R = 1000)
-
-
-Bootstrap Statistics :
-        original        bias     std. error
-t1* 56.900099702 -6.863131e-02 2.1133492036
-t2* -0.466189630  9.942586e-04 0.0336689369
-t3*  0.001230536 -3.381623e-06 0.0001218251'
