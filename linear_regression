@@ -1,0 +1,114 @@
+#---------------------------
+# Linear Regression
+# Reference: An Introduction of Statistical Learning
+#---------------------------
+
+# loading libraries
+library(MASS)
+install.packages("ISLR")
+library(ISLR)
+
+#----------
+# 1. Simple Linear Regression
+fix(Boston)
+str(Boston)
+names(Boston)
+
+with(Boston, plot(lstat, medv))
+hist(Boston$medv)
+
+lm.fit <- lm(medv ~ lstat, data = Boston)
+summary(lm.fit)
+
+# find out what other pieces of information are stored in lm.fit
+names(lm.fit)
+
+# find out coefficients
+lm.fit$coefficients
+coef(lm.fit)
+
+# obtain a confidence interval for the coefficient estimates
+confint(lm.fit)
+
+# prediction with confidence intervals and prediction intervals
+predict(lm.fit, data.frame(lstat = (c(5, 10, 15))), interval = "confidence")
+predict(lm.fit, data.frame(lstat = (c(5, 10, 15))), interval = "prediction")
+
+# plot
+with(Boston, plot(lstat, medv))
+abline(lm.fit)
+abline(lm.fit, lwd = 3)
+abline(lm.fit, lwd = 3, col = "red")
+
+# diagnostic plots
+par(mfrow = c(2,2))
+plot(lm.fit)
+
+par(mfrow = c(1,1))
+plot(predict(lm.fit), residuals(lm.fit))
+plot(predict(lm.fit), rstudent(lm.fit)) # studentized residual
+
+plot(hatvalues(lm.fit)) # Leverage statistics
+which.max(hatvalues(lm.fit))
+
+#----------
+# 2. Multiple Linear Regression
+lm.fit <- lm(medv ~ lstat + age, data = Boston)
+summary(lm.fit)
+
+lm.fit <- lm(medv ~ ., data = Boston)
+summary(lm.fit)
+
+summary(lm.fit)$r.sq # R squared
+summary(lm.fit)$sigma # RSE (Residual Standard Error)
+
+install.packages("car")
+library(car)
+vif(lm.fit) # Variance Inflation Factors
+
+# run a regression excluding 'age' predictor
+lm.fit1 <- lm(medv ~ . - age, data = Boston)
+summary(lm.fit1)
+
+lm.fit1 <- update(lm.fit, ~. -  age)
+summary(lm.fit1)
+
+#----------
+# 3. Interaction Terms
+summary(lm(medv ~ lstat*age, data = Boston))
+summary(lm(medv ~ lstat + age + lstat:age, data = Boston))
+
+#----------
+# 4. Non-linear Transformation of the Predictors
+lm.fit2 <- lm(medv ~ lstat + I(lstat^2), data = Boston)
+summary(lm.fit2)
+
+lm.fit <- lm(medv ~ lstat, data = Boston)
+
+# hypothesis test
+anova(lm.fit, lm.fit2) 
+
+# polynomial regression
+lm.fit5 <- lm(medv ~ poly(lstat, 5), data = Boston)
+summary(lm.fit5)
+
+# log transformation of predictor
+hist(Boston$rm)
+hist(log(Boston$rm))
+summary(lm(medv ~ log(rm), data = Boston))
+
+
+#----------
+# Qualitative predictors
+fix(Carseats)
+names(Carseats)
+str(Carseats)
+
+# R generates dummy variables automatically
+# : ShelveLocGood, ShelveLocMedium
+lm.fit <- lm(Sales ~. + Income:Advertising + Price:Age, data = Carseats)
+summary(lm.fit)
+
+# contrasts(): returns the coding that R uses for the dummy variables
+contrasts(Carseats$ShelveLoc)
+
