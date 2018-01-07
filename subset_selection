@@ -1,0 +1,118 @@
+#----------------------------------------------------------
+# Subset Selection: Best subset, Forward, Backward, Hybrid
+# Regularization: Ridge regression, LASSO
+# Dimension Reduction: PCR, PLS
+#----------------------------------------------------------
+
+#----------
+# 1. Subset Selection
+
+# 1-1. Best Subset Selection
+library(ISLR)
+fix(Hitters)
+str(Hitters)
+names(Hitters)
+dim(Hitters)
+
+# removes all of the rows that have missing values in any variable
+sum(is.na(Hitters))
+Hitters <- na.omit(Hitters)
+sum(is.na(Hitters))
+
+dim(Hitters)
+
+table(Hitters$League)
+table(Hitters$Division)
+table(Hitters$League, Hitters$Division)
+
+# linear regression model using lm() function
+lm.fit <- lm(Salary ~ ., data = Hitters)
+summary(lm.fit)
+
+# best subset selection
+install.packages("leaps")
+library(leaps)
+regfit.full <- regsubsets(Salary ~ ., data = Hitters) # restricted to 8 variables
+summary(regfit.full)
+
+# nvmax option to increase # of variables
+regfit.full <- regsubsets(Salary ~ ., data = Hitters, nvmax = 19) 
+reg.summary <- summary(regfit.full)
+names(reg.summary)
+
+# statistics from reg.summary
+reg.summary$rsq
+
+# plotting RSS, adjusted R2, Cp, BIC
+par(mfrow = c(2,2))
+plot(reg.summary$rss, xlab = "Number of Variables", ylab = "RSS", type = "l")
+
+plot(reg.summary$adjr2, xlab = "Number of Variables", ylab = "Adjusted RSq", type = "l")
+which.max(reg.summary$adjr2)
+points(11, reg.summary$adjr2[11], col = "red", cex = 2, pch = 20)
+
+plot(reg.summary$cp, xlab = "Number of Variables", ylab = "Cp", type = "l")
+which.min(reg.summary$cp)
+points(10, reg.summary$cp[10], col = "red", cex = 2, pch = 20)
+
+plot(reg.summary$bic, xlab = "Number of Variables", ylab = "BIC", type = "l")
+which.min(reg.summary$bic)
+points(6, reg.summary$bic[6], col = "red", cex = 2, pch = 20)
+
+par(mfrow = c(1,1))
+plot(regfit.full, scale = "r2")
+plot(regfit.full, scale = "adjr2")
+plot(regfit.full, scale = "Cp")
+plot(regfit.full, scale = "bic")
+
+# see the coefficient estimates associated with best subset selection model
+coef(regfit.full, 6)
+
+
+# ----------
+# Forward and Backward Stepwise Selection
+
+# Forward Stepwise Selection
+regfit.fwd <- regsubsets(Salary ~ ., data = Hitters, nvmax = 19, method = "forward")
+summary(regfit.fwd)
+
+# Backward Stepwise Selection
+regfit.bwd <- regsubsets(Salary ~ ., data = Hitters, nvmax = 19, method = "backward")
+summary(regfit.bwd)
+reg.bwd.summary <- summary(regfit.bwd)
+which.min(reg.bwd.summary$bic)
+
+# Sequence replacement search
+regfit.seqrep <- regsubsets(Salary ~ ., data = Hitters, nvmax = 19, method = "seqrep")
+summary(regfit.seqrep)
+reg.seqrep.summary <- summary(regfit.seqrep)
+which.min(reg.seqrep.summary$bic)
+
+
+# ----------
+# Choosing among models using the validaton set approach and Cross-Validation
+
+# splitting the observations into a training set and a test set
+set.seed(1)
+train <- sample(c(TRUE, FALSE), nrow(Hitters), rep = TRUE)
+test <- (!train)
+
+# apply regsubsets() to the training set in order to perform best subset selection
+regfit.fwd <- regsubsets(Salary ~ ., data = Hitters[train,], nvmax = 19, method = "forward")
+
+# make a model matrix from the test data: "X" matrix form data
+test.mat <- model.matrix(Salary ~ ., data = Hitters[test,])
+
+# run a loop, and for each size i, we extract the coefficents from regfit.fwd
+# multiply coefficients into the appropriate columns of the test model matrix to form the predictions, 
+# and compute the test MSE
+val.errors <- rep(NA, 19)
+for (i in 1:19){
+  coefi <- coef(regfit.fwd, id = i) # extracting coefficients
+  pred <- test.mat[, names(coefi)]%*%coefi # prediction of test set
+  val.errors[i] <- mean((Hitters$Salary[test] - pred)^2) # MSE of test set
+}
+
+val.errors
+which.min(val.errors)
+coef(regfit.fwd, 12)
