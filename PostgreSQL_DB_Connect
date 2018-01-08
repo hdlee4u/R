@@ -1,0 +1,22 @@
+# installing and loading packages
+install.packages("RPostgreSQL")
+library(RPostgreSQL)
+
+# setting Driver: dbDriver()
+drv <- dbDriver("PostgreSQL")
+
+# setting dbConnect
+con <- dbConnect(drv, 
+                 dbname = "testdb", 
+                 host = "192.168.188.131", 
+                 port = 5432, 
+                 user = "gpadmin", 
+                 password = "changeme")
+
+# DB SQL Query
+r_sql <- c("SELECT * FROM emp")
+
+sql_result <- dbGetQuery(con, r_sql)
+sql_result
+
+dbDisconnect(conn = con)
