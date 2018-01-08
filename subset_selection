@@ -8,8 +8,9 @@
 # 1. Subset Selection
 
 # 1-1. Best Subset Selection
+install.packages("ISLR")
 library(ISLR)
-fix(Hitters)
+Hitters <- Hitters
 str(Hitters)
 names(Hitters)
 dim(Hitters)
@@ -75,6 +76,8 @@ coef(regfit.full, 6)
 # Forward Stepwise Selection
 regfit.fwd <- regsubsets(Salary ~ ., data = Hitters, nvmax = 19, method = "forward")
 summary(regfit.fwd)
+reg.fwd.summary <- summary(regfit.fwd)
+which.min(reg.fwd.summary$cp) # 10
 
 # Backward Stepwise Selection
 regfit.bwd <- regsubsets(Salary ~ ., data = Hitters, nvmax = 19, method = "backward")
@@ -116,3 +119,111 @@ for (i in 1:19){
 val.errors
 which.min(val.errors)
 coef(regfit.fwd, 12)
+
+# make predict method
+predict.regsubsets <- function(object, newdata, id, ...){
+  form <- as.formula(object$call[[2]])
+  mat <- model.matrix(form, newdata)
+  coefi <- coef(object, id = id)
+  xvars <- names(coefi)
+  mat[, xvars]%*%coefi
+}
+
+# make regression model with full data set
+regfit.fwd <- regsubsets(Salary ~ ., data = Hitters, nvmax = 19, method = "forward")
+coef(regfit.fwd, 10)
+
+
+# ----------
+# Cross-Validation
+
+k <- 10
+set.seed(1)
+folds <- sample(1:k, nrow(Hitters), replace = TRUE)
+cv.errors <- matrix(NA, k, 19, dimnames = list(NULL, paste(1:19)))
+
+for (j in 1:k) {
+  best.fit <- regsubsets(Salary ~ ., data = Hitters[folds !=j,], nvmax = 19)
+  for (i in 1:19) {
+    pred <- predict(best.fit, Hitters[folds == j,], id = i)
+    cv.errors[j, i] <- mean((Hitters$Salary[folds == j] - pred)^2)
+  }
+}
+
+# plot of MSE per number of variables
+mean.cv.errors <- apply(cv.errors, 2, mean)
+mean.cv.errors
+plot(mean.cv.errors, type = "b")
+which.min(mean.cv.errors) # 11
+points(11, mean.cv.errors[11], col = "red", cex = 2, pch=20)
+
+# perform best subset selection on the full data set in order to obtain the 11-variable model
+reg.best <- regsubsets(Salary ~ ., data = Hitters, nvmax = 19)
+coef(reg.best, 11)
+
+
+# ----------
+# Ridge Regression
+install.packages("glmnet")
+library(glmnet)
+
+x <- model.matrix(Salary ~ ., data = Hitters)[,-1]
+y <- Hitters$Salary
+
+grid <- 10^seq(10, -2, length = 100)
+ridge.mod <- glmnet(x, y, alpha = 0, lambda = grid) # alpha = 0 : Ridge Regression, standardization is default
+
+dim(coef(ridge.mod))
+
+plot(ridge.mod)
+
+ridge.mod$lambda[50]
+coef(ridge.mod)[,50]
+
+ridge.mod$lambda[60]
+coef(ridge.mod)[,60]
+
+# obtain the ridge regression coefficients for a new value of lambda, say 50 by using predict()
+predict(ridge.mod, s=50, type = "coefficients")[1:20,]
+barplot(predict(ridge.mod, s=50, type = "coefficients")[1:20,])
+
+
+# sampling of train, test set
+set.seed(1)
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- (-train)
+y.test <- y[test]
+
+ridge.mod <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12) # alpha = 0: Ridge
+ridge.pred <- predict(ridge.mod, s=4, newx = x[test,])
+mean((ridge.pred - y.test)^2) # MSE of test set
+
+# choosing the best lambda by cross-validation
+set.seed(1)
+cv.out <- cv.glmnet(x[train,], y[train], alpha=0)
+plot(cv.out)
+bestlam <- cv.out$lambda.min # best lambda
+bestlam
+
+ridge.pred <- predict(ridge.mod, s = bestlam, newx = x[test,])
+mean((ridge.pred - y.test)^2)
+
+
+# ----------
+# LASSO(Least Absolute Shrinkage and Selection Operator)
+lasso.mod <- glmnet(x[train,], y[train], alpha = 1, lambda = grid)
+plot(lasso.mod)
+
+# choosing the best lambda by Cross-Validation
+set.seed(1)
+cv.out.lasso <- cv.glmnet(x[train,], y[train], alpha=1) # alpha=1: LASSO
+plot(cv.out.lasso)
+bestlam <- cv.out.lasso$lambda.min
+bestlam
+lasso.pred <- predict(lasso.mod, s=bestlam, newx=x[test,])
+mean((lasso.pred - y.test)^2)
+
+lasso.mod.full <- glmnet(x, y, alpha=1, lambda=grid)
+lasso.coef <- predict(lasso.mod.full, type = "coefficients", s=bestlam)[1:20,]
+lasso.coef
+lasso.coef[lasso.coef != 0]
