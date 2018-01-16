@@ -1,0 +1,31 @@
+# 4. K-Nearest Neighbors (K-NN)
+
+library(class)
+
+# Hold out
+train <- (Smarket$Year < 2005) # train set
+Smarket.2005 <- Smarket[!train,] # test set
+
+# prepare for the input matrix
+train.X <- cbind(Smarket$Lag1, Smarket$Lag2)[train,]
+test.X <- cbind(Smarket$Lag1, Smarket$Lag2)[!train,]
+train.Direction <- Smarket$Direction[train]
+
+# predict: k = 1
+set.seed(1) # for reproducibility
+knn.pred <- knn(train.X, test.X, train.Direction, k = 1)
+
+table(Direction.2005, knn.pred)
+
+options(digits = 3)
+prop.table(table(Direction.2005, knn.pred))
+
+mean(Direction.2005 == knn.pred)
+
+# pred: k = 3
+knn.pred.k.3 <- knn(train.X, test.X, train.Direction, k = 3)
+
+table(Direction.2005, knn.pred.k.3)
+prop.table(table(Direction.2005, knn.pred.k.3))
+
+mean(Direction.2005 == knn.pred.k.3)
