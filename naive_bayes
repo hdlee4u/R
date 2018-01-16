@@ -1,0 +1,132 @@
+##--------------------------
+## Naive Bayes Classifier
+## : Spam filter
+## Reference : Machine Learning with R by Brett Lantz
+##--------------------------
+
+##-- loeading dataset
+sms_raw <- read.csv("D:/admin/Documents/R/sms_spam.csv", stringsAsFactors = F)
+sms_raw$text <- iconv(enc2utf8(sms_raw$text), sub = "byte") # just in case encoding problem occurs
+
+# only keep 'ham' and 'spam' at 'type' variable
+str(sms_raw)
+table(sms_raw$type)
+
+sms_raw <- subset(sms_raw, subset = (type %in% c("ham", "spam")))
+table(sms_raw$type)
+
+# changing 'type' variable from character to factor
+sms_raw$type <- as.factor(sms_raw$type)
+str(sms_raw$type)
+
+
+##-- install, load 'tm' package
+install.packages("tm")
+library(tm)
+
+# for more information about "tm" package
+print(vignette("tm"))
+
+
+##-- make corpus
+sms_corpus <- Corpus(VectorSource(sms_raw$text))
+print(sms_corpus)
+inspect(sms_corpus[1:5])
+
+##-- clean data using tm_map() function
+# change all text to lower case letter
+corpus_clean <- tm_map(sms_corpus, tolower)
+
+# remove numbers
+corpus_clean <- tm_map(corpus_clean, removeNumbers)
+
+# remove stopwords: ex. to, and, but, or, it, very, too, ...
+corpus_clean <- tm_map(corpus_clean, removeWords, stopwords())
+
+# remove punctuation
+corpus_clean <- tm_map(corpus_clean, removePunctuation)
+
+# check the result of data cleaning
+inspect(corpus_clean[1:5])
+
+
+##-- tokenization using DocumentTermMatrix() function
+sms_dtm <- DocumentTermMatrix(corpus_clean)
+
+
+##-- split dataset into train and test set by random sampling
+set.seed(1)
+train <- sample(1:nrow(sms_raw), nrow(sms_raw)*0.75, replace = FALSE)
+test <- (!train)
+
+# sms raw data partition
+sms_raw_train <- sms_raw[train,]
+sms_raw_test <- sms_raw[-train,]
+
+# corpus clean data partition
+sms_corpus_train <- corpus_clean[train]
+sms_corpus_test <- corpus_clean[-train]
+
+# DocumentTermMatrix partition
+sms_dtm_train <- sms_dtm[train,]
+sms_dtm_test <- sms_dtm[-train,]
+
+# check the proportion of ham and span in train and test set
+prop.table(table(sms_raw_train$type))
+prop.table(table(sms_raw_test$type))
+
+
+##-- word colud
+install.packages("wordcloud")
+library(wordcloud)
+wordcloud(sms_corpus_train, min.freq = 40, random.order = FALSE)
+
+spam <- subset(sms_raw_train, subset = (type == "spam"))
+ham <- subset(sms_raw_train, subset = (type == "ham"))
+
+wordcloud(spam$text, max.words = 40, scale = c(3, 0.5), random.order = F)
+wordcloud(ham$text, max.words = 40, scale = c(3, 0.5), random.order = F)
+
+
+##-- if the frequency is too small, then delete it
+findFreqTerms(sms_dtm_train, 5)
+sms_dict <- findFreqTerms(sms_dtm_train, 5)
+
+sms_train <- DocumentTermMatrix(sms_corpus_train, 
+                                list(dictionary = sms_dict))
+
+sms_test <- DocumentTermMatrix(sms_corpus_test, 
+                               list(dictionary = sms_dict))
+
+
+##-- convert into factor
+convert_counts <- function(x) {
+  x <- ifelse(x > 0, 1, 0)
+  x <- factor(x, levels = c(0, 1), labels = c("No", "Yes"))
+  return(x)
+}
+
+sms_train <- apply(sms_train, MARGIN = 2, convert_counts)
+sms_test <- apply(sms_test, MARGIN = 2, convert_counts)
+
+
+##-- fit Naive Bayes model using e1071 package
+install.packages("e1071")
+library(e1071)
+
+sms_classifier <- naiveBayes(sms_train, sms_raw_train$type, laplace = 1)
+
+summary(sms_classifier)
+sms_classifier[[2]][1:3] # indexing from table
+
+
+##-- evaluate the model performance
+sms_test_pred <- predict(sms_classifier, sms_test)
+
+install.packages("gtools")
+install.packages("gmodels")
+library(gmodels)
+CrossTable(sms_raw_test$type, sms_test_pred, 
+           prop.chisq = FALSE, 
+           prop.t = FALSE, 
+           dnn = c('actual', 'predicted'))
