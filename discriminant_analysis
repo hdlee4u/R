@@ -1,0 +1,50 @@
+# ----------
+# 2. Linear Discriminant Analysis (LDA)
+library(MASS) # lda() function
+library(ISLR) # Smarket dataset
+
+# Hold out
+train <- (Smarket$Year < 2005) # train set
+Smarket.2005 <- Smarket[!train,] # test set
+
+# fit the LDA model with lda() function
+lda.fit <- lda(Direction ~ Lag1 + Lag2, data = Smarket, subset = train)
+lda.fit
+
+# predict
+lda.pred <- predict(lda.fit, newdata = Smarket.2005)
+names(lda.pred)
+
+lda.class <- lda.pred$class
+table(Direction.2005, lda.class)
+
+mean(Direction.2005 == lda.class)
+
+sum(lda.pred$posterior[,1] >= .5)
+sum(lda.pred$posterior[,1] < .5)
+
+lda.pred$posterior[1:20, 1]
+lda.class[1:20]
+
+# use a posterior probability threshold other than 50% in order to make predictions
+sum(lda.pred$posterior[,1] > .9)
+
+
+# ----------
+# 3. Quadratic Discriminant Analysis (QDA)
+library(MASS) # lda() function
+library(ISLR) # Smarket dataset
+
+# Hold out
+train <- (Smarket$Year < 2005) # train set
+Smarket.2005 <- Smarket[!train,] # test set
+
+# fit
+qda.fit <- qda(Direction ~ Lag1 + Lag2, data = Smarket, subset = train)
+qda.fit
+
+# predict
+qda.class <- predict(qda.fit, newdata = Smarket.2005)$class
+table(Direction.2005, qda.class)
+
+mean(Direction.2005 == qda.class)
