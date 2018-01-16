@@ -1,0 +1,92 @@
+# EDA of Stock Market Dataset
+library(ISLR)
+names(Smarket)
+dim(Smarket)
+head(Smarket)
+summary(Smarket)
+
+# scatter plot matrix
+pairs(Smarket)
+
+# pairwise correlation matrix
+cor(Smarket[,-9])
+
+plot(Smarket$Volume)
+
+# ----------
+# 1. Logistic Regression
+glm.fit <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume, 
+               data = Smarket, 
+               family = binomial)
+
+summary(glm.fit)
+
+# access the coefficients for the fitted model
+coef(glm.fit) # coefficient only
+summary(glm.fit)$coef # summary of coefficient
+summary(glm.fit)$coef[,4] # indexing p-value
+
+# calculate the probability with predict() function
+glm.probs <- predict(glm.fit, type = "response")
+glm.probs[1:10]
+
+# check a dummy variable's encoding
+contrasts(Smarket$Direction)
+
+# make a prediction as to whether the market will go up or down on a particular day
+glm.pred <- rep("Down", 1250)
+glm.pred[glm.probs > .5] = "Up"
+glm.pred[1:10]
+
+# make a confusion matrix
+table(Smarket$Direction, glm.pred)
+
+(145+507)/1250 # accuracy
+mean(glm.pred == Smarket$Direction) # accuracy
+
+
+## Hold Out Appraoch
+train <- (Smarket$Year < 2005) # train set
+
+Smarket.2005 <- Smarket[!train,] # test set
+dim(Smarket.2005)
+Direction.2005 <- Smarket$Direction[!train]
+                                                                                                                                        
+# train with training set
+glm.fit <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume, 
+               data = Smarket, 
+               family = binomial, 
+               subset = train) # <- training set
+
+# calculate the probabilities on test set
+glm.probs <- predict(glm.fit, Smarket.2005, type="response")
+
+# compute the predictions with the threshold of 0.5
+glm.pred <- rep("Down", 252)
+glm.pred[glm.probs > .5] = "Up"
+table(Direction.2005, glm.pred)
+mean(Direction.2005 == glm.pred) # accuracy 0.48
+mean(Direction.2005 != glm.pred) # test error rate 0.52
+
+
+# -----
+# refit the model with only 'Lag1' and 'Lag2'
+glm.fit2 <- glm(Direction ~ Lag1 + Lag2, 
+                data = Smarket, 
+                family = binomial, 
+                subset = train)
+
+glm.probs2 <- predict(glm.fit2, Smarket.2005, type = "response") # for test set
+
+glm.pred2 <- rep("Down", 252)
+glm.pred2[glm.probs2 > 0.5] <- "Up"
+
+table(Direction.2005, glm.pred2)
+
+mean(glm.pred2 == Direction.2005)
+
+# calculate the probability with new data set
+predict(glm.fit2, 
+        newdata = data.frame(Lag1 = c(1.2, 1.5), 
+                             Lag2 = c(1.1, -0.8)), 
+        type = "response")
