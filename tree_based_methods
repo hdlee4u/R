@@ -185,7 +185,7 @@ abline(0, 1)
 
 # MSE, RMSE
 mean((yhat.rf - boston.test)^2) # MSE
-sqrt(mean((yhat.tf - boston.test)^2)) # RMSE
+sqrt(mean((yhat.rf - boston.test)^2)) # RMSE
 
 # variable importance
 importance(rf.boston)
