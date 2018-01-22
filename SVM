@@ -1,0 +1,270 @@
+##-------------------------------------------------
+## SVM(Support Vector Machine)
+## reference: Introduction to Statistical Learning
+## library: e1071, LiblineaR (for very large linear problems)
+##------------------------------------------------
+
+#----------
+# (1) Support Vector Classifier
+set.seed(1)
+x <- matrix(rnorm(20*2), ncol = 2) 
+y <- c(rep(-1, 10), rep(1, 10)) 
+x[y==1,] <- x[y==1,] + 1
+
+# check whether the classes are linearly separable or not
+plot(x, col = (3-y))
+
+# encode the response as a factor variable in a DataFrame
+data.df <- data.frame(var1 = x[,1], var2 = x[,2], y = as.factor(y))
+data.df[1:5,]
+
+# load 'e1071' library
+install.packages("e1071")
+library(e1071)
+
+sv.classifier <- svm(y ~ ., 
+                     data = data.df, 
+                     kernel = "linear", # Support Vector Classifer
+                     cost = 10, # the cost of a violation to the margin
+                     scale = FALSE) # if T then standardization
+
+# plot the support vector classifier obtained
+plot(data.df[, "var2"], data.df[,"var1"], col=(3-y))
+plot(sv.classifier, data = data.df) # crosses: support vectors, circles: remaining observations
+sv.classifier$index # check the support vectors' identityies
+
+# obtain some basic information about the SV Classifier Fit
+summary(sv.classifier)
+
+# what if we instead used a smaller value of the cost parameter?
+sv.classifier.sm.cost <- svm(y ~ ., 
+                             data = data.df, 
+                             kernel = "linear", 
+                             cost = 0.1, # smaller cost
+                             scale = FALSE)
+
+plot(sv.classifier.sm.cost, data = data.df)
+sv.classifier.sm.cost$index # larger number of support vectors, because the margin is wider
+
+#----------
+# 10-fold Cross-Validation using tune() function
+set.seed(1)
+tune.out <- tune(svm, 
+                 y ~ ., 
+                 data = data.df, 
+                 kernel = "linear", 
+                 ranges = list(cost = c(0.001, 0.01, 0.1, 1, 5, 10, 100)), 
+                 scale = FALSE)
+
+# check the CV results, find the best model parameter of 'cost'
+summary(tune.out)
+
+bestmod <- tune.out$best.model
+summary(bestmod) # cost: 0.1
+
+#----------
+# predict the class on a set of test set using predict() function, at any given value of the cost parameter
+# make test set
+xtest <- matrix(rnorm(20*2), ncol = 2)
+ytest <- sample(c(-1, 1), 20, rep = TRUE)
+xtest[ytest == 1,] <- xtest[ytest == 1,] + 1
+test.df <- data.frame(var1 = xtest[,1], var2 = xtest[,2], y = as.factor(ytest))
+
+# use the best model obtained through cross-validation to make predictions
+ypred <- predict(bestmod, test.df)
+table(predict = ypred, truth = test.df$y)
+
+# what if we had instead used cost=0.01?
+ypred.sm.cost <- predict(sv.classifier.sm.cost, test.df)
+table(predict = ypred.sm.cost, truth = test.df$y)
+
+#-----
+# situation in which two classes are linearly separable
+# when cost=1e5
+x[y==1,] <- x[y==1,] + 0.5
+plot(x, col = (y+5)/2, pch = 19)
+
+dat <- data.frame(x=x, y=as.factor(y))
+svmfit <- svm(y~., data=dat, kernel="linear", cost=1e5)
+summary(svmfit)
+
+# the margin is narrow. It seems likely that this model will perform poorly on test data
+plot(svmfit, data=dat) 
+
+#-----
+# when cost=1
+svmfit.cost.1 <- svm(y~., data=dat, kernel="linear", cost=1)
+summary(svmfit.cost.1)
+
+# this model misclassify a training observation, 
+# but the margin is much wider and make use of seven support vectors
+# It seems likely that this model will perform better on test data than the model with cost=1e5
+plot(svmfit.cost.1, data=dat)
+
+
+#----------
+# (2) Support Vector Machine
+rm(list=ls())
+
+# create simulated sample data
+set.seed(1) # for reproducibility
+
+x <- matrix(rnorm(200*2), ncol=2)
+x[1:100, ] <- x[1:100,]+2
+x[101:150,] <- x[101:150,]-2
+
+y <- c(rep(1, 150), rep(2, 50))
+
+my.df <- data.frame(var1=x[,1], var2=x[,2], y=as.factor(y))
+my.df[1:10,]
+
+# Plotting the data makes it clear that the class boundary is indeed nonlinear
+plot(x, col=y+2)
+
+# split into training and testing groups
+train <- sample(200, 100)
+
+#-----
+# fit the training data using the svm() function with a radial kernel and gamma=1, cost=1
+svm.fit.radial <- svm(y~., data=my.df[train,], kernel="radial", gamma=1, cost=1)
+
+# check the model
+plot(svm.fit.radial, my.df[train,])
+summary(svm.fit.radial)
+
+#-----
+# fit the training data with smaller cost : cost=1e5
+svm.fit.radial.sm.cost <- svm(y~., data=my.df[train,], kernel="radial", gamma=1, cost=1e5)
+
+# it reduces the number of training error at the price of a more irregular decision boundary
+# => likely to overfit the training data
+plot(svm.fit.radial.sm.cost, data=my.df[train,])
+summary(svm.fit.radial.sm.cost)
+
+#-----
+# Cross-Validation using tune() function to select the best choice of gamma and cost
+set.seed(1)
+svm.fit.cv <- tune(svm, 
+                   y~., 
+                   data=my.df[train,], 
+                   kernel="radial", 
+                   ranges=list(cost=c(0.1, 1, 10, 100, 1000), 
+                               gamma=c(0.5, 1, 2, 3, 4)))
+
+# check the best parameters, best model
+summary(svm.fit.cv)
+
+names(svm.fit.cv)
+svm.fit.cv$best.parameters
+svm.fit.cv$best.model
+
+# prefict for the test set
+table(true=my.df[-train,"y"], 
+      pred=predict(svm.fit.cv$best.model, newx=my.df[-train,]))
+
+# accuracy
+(56+5)/100
+
+#-----
+# ROC curve
+install.packages("ROCR")
+library(ROCR)
+
+# function of ROC curve
+rocplot <- function(pred, truth, ...){
+  predob = prediction(pred, truth)
+  perf = performance(predob, "tpr", "fpr")
+  plot(perf, ...)
+}
+
+svmfit.opt <- svm(y~., 
+                  data=my.df[train,], 
+                  kernel="radial",
+                  gamma=2,
+                  cost=1,
+                  decision.values=TRUE) # obtain the fitted values for a given SVM model fit
+
+summary(svmfit.opt)
+attributes(svmfit.opt)
+
+fitted <- attributes(predict(svmfit.opt, my.df[train,], decision.values=T))$decision.values
+fitted
+
+par(mfrow=c(1,2))
+rocplot(fitted, my.df[train,"y"], main="Training Data")
+
+# increase gamma => a more flexible fit and generate further improvements in accuracy
+svm.fit.flex <- svm(y~., 
+                    data=my.df[train,],
+                    kerenl="radial",
+                    gamma=50,
+                    cost=1,
+                    decision.values=T)
+
+fitted.flex <- attributes(predict(svm.fit.flex, 
+                                  my.df[train,], 
+                                  decision.values=T))$decision.values
+
+rocplot(fitted.flex, my.df[train, "y"], add=T, col="red")
+
+# predict on test set
+fitted.opt.test <- attributes(predict(svmfit.opt, my.df[-train,], decision.values = T))$decision.values
+rocplot(fitted.opt.test, my.df[-train,"y"], main="Test Data")
+
+fitted.flex.test <- attributes(predict(svm.fit.flex, my.df[-train,], decision.values=T))$decision.values
+rocplot(fitted.flex.test, my.df[-train,"y"], add=T, col="red")
+
+
+#----------
+# (3) SVM with multiple classes
+# : performing multi-class classification using the one-versus-one appraoch
+
+# make sample data with multi-classes
+set.seed(1)
+x <- rbind(x, matrix(rnorm(50*2), ncol=2))
+y <- c(y, rep(0, 50))
+x[y==0,2] <- x[y==0, 2] + 2
+
+dat <- data.frame(x=x, y=as.factor(y))
+par(mfrow=c(1,1))
+plot(x, col=(y+2))
+
+# fit an SVM to the data
+svmfit.multi.class <- svm(y~., 
+                          data=dat,
+                          kernel="radial",
+                          cost=10,
+                          gamma=1)
+
+summary(svmfit.multi.class)
+plot(svmfit.multi.class, dat)
+
+
+#----------
+# (4) Application to gene expression data
+library(ISLR)
+names(Khan)
+str(Khan)
+dim(Khan$xtrain)
+length(Khan$ytrain)
+
+# cancer subtypes
+table(Khan$ytrain)
+table(Khan$ytest)
+
+# predict cancer subtype using gene expression measurements
+gene.df <- data.frame(x=Khan$xtrain, y=as.factor(Khan$ytrain))
+svmfit.gene <- svm(y~., 
+                   data=gene.df, 
+                   kernel="linear",
+                   cost=10)
+
+summary(svmfit.gene, data=gene.df)
+
+# result on training set
+table(svmfit.gene$fitted, gene.df$y)
+
+# result on test set
+gene.df.test <- data.frame(x=Khan$xtest, y=as.factor(Khan$ytest))
+pred.test <- predict(svmfit.gene, newdata=gene.df.test)
+table(pred.test, gene.df.test$y)
