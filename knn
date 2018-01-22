@@ -1,5 +1,5 @@
 # 4. K-Nearest Neighbors (K-NN)
-
+library(ISLR) # Smarket dataset
 library(class)
 
 # Hold out
