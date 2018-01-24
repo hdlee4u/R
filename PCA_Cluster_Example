@@ -1,0 +1,103 @@
+##--------------------------------------------------
+## NC160 Data Example w/ PCA and Clustering
+## - source: An Introduction to Statistical Learning
+##--------------------------------------------------
+
+# load NCI60 data from ISLR package : cancer cell line microarray data
+library(ISLR)
+str(NCI60)
+
+nci.labs <- NCI60$labs
+nci.data <- NCI60$data
+
+dim(nci.data)
+nci.data[1:5, 1:10]
+
+nci.labs[1:10]
+table(nci.labs)
+
+#-----
+# (1) PCA on the NCI60 data
+pr.out <- prcomp(nci.data, scale = TRUE) # scale=T: standardization
+names(pr.out)
+
+# plot the observations with the same color corresponding to a given cancer type
+Cols <- function(vec){
+  cols = rainbow(length(unique(vec)))
+  return(cols[as.numeric(as.factor(vec))])
+}
+
+par(mfrow = c(1,2))
+plot(pr.out$x[,1:2], col=Cols(nci.labs), pch=19, xlab="Z1", ylab="Z2")
+plot(pr.out$x[,c(1,3)], col=Cols(nci.labs), pch=19, xlab="Z1", ylab="Z3")
+
+# summary of PCA
+summary(pr.out)
+
+# plot the variance explained by the first few principal components
+# the height of each bar in the plot is given by squaring the corresponding element of pr.out$sdev
+par(mfrow = c(1,1))
+plot(pr.out) 
+
+# scree plot
+# there is an elbow in the plot after approximately the seventh principal component
+# => there may be little benefit to exammining more than seven or so principal components
+pve <- 100*pr.out$sdev^2/sum(pr.out$sdev^2) # Proportion of Varice Explained
+par(mfrow = c(1,2))
+plot(pve, type="o", ylab="PVE", xlab="Principal Component", col="blue")
+plot(cumsum(pve), tpye="o", ylab="Cumulative PVE", xlab="Principal Component", col="brown3")
+
+# PVE and Cumulative PVE from summary(pr.out)$importance[2,], [3,]
+summary(pr.out)$importance[2,] # PVE
+summary(pr.out)$importance[3,] # Cumulative PVE
+
+
+#-----
+# (2) Hierarchical Clustering of the NCI60 data
+nci.data.scale <- scale(nci.data)
+
+# hierarchical clustering using complete, average, and single linkage
+# euclidean distance as a dissimilarity measure
+nci.hc.complete <- hclust(dist(nci.data.scale, method="euclidean"), method="complete")
+nci.hc.average <- hclust(dist(nci.data.scale, method="euclidean"), method="average")
+nci.hc.single <- hclust(dist(nci.data.scale, method="euclidean"), method="single")
+
+# plot
+par(mfrow=c(1,3))
+# complete and average linkage tend to yield more balanced, attractive clusters
+plot(nci.hc.complete, labels=nci.labs, main="Complete Linkage", xlab="", ylab="")
+plot(nci.hc.average, labels=nci.labs, main="Average Linkage", xlab="", ylab="")
+
+# single linkage tend to yield trailing clusters
+# : very large clusters onto which individual observations attach one-by-one
+plot(nci.hc.single, labels=nci.labs, main="Single Linkage", xlab="", ylab="")
+
+# cut the dendrogram at the height that will yield 4 clusters
+nci.hc.complete.4 <- cutree(nci.hc.complete, 4)
+table(nci.hc.complete.4, nci.labs)
+
+# plot
+par(mfrow=c(1,1))
+plot(nci.hc.complete, labels=nci.labs)
+abline(h=139, col="red", lty=2)
+
+# brief summary of the cluster result
+nci.hc.complete
+
+
+#-----
+# (3) K-means clustering of NCI60 data
+set.seed(1)
+nci.kmeans <- kmeans(nci.data.scale, 4, nstart=20)
+nci.km.clusters <- nci.kmeans$cluster
+
+# compare the clustering result between Hierarchical and K-means clustering
+table(nci.km.clusters, nci.hc.complete.4)
+
+
+#-----
+# (4) PCA first => Hierarchical Clustering later w/ 5 Principal Components only
+# => better result because the principal component step denoised the data
+nci.hc.pca <- hclust(dist(pr.out$x[,1:5]), method="complete")
+plot(nci.hc.pca, labels=nci.labs, main="Hierarchical Clustering on First 5 PC Score Vectors")
+table(cutree(nci.hc.pca, 4), nci.labs)
