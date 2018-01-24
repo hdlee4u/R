@@ -1,0 +1,71 @@
+##----------------------------------------------------
+## PCA(Principal Component Analysis)
+## - source : An Introduction To Statistical Learning
+##----------------------------------------------------
+
+# load ISLR package and dataset
+library(ISLR)
+str(USArrests)
+states <- row.names(USArrests) # row names (States names)
+names(USArrests) # columns
+
+# Exploratory Data Analysis
+# Assault has by far the largest mean and variance. So it is importanct to standardize the varibales
+apply(USArrests, 2, mean)
+apply(USArrests, 2, sd) 
+
+# Excute PCA using prcomp() function
+pr.out <- prcomp(USArrests, scale=TRUE) # scale=T : standardization
+
+summary(pr.out)
+
+names(pr.out) # [1] "sdev"     "rotation" "center"   "scale"    "x"
+
+pr.out$center # the means of the variables that were used for scaling prior to implementing PCA
+pr.out$scale # the standard deviation of the variables that were used for scaling prior to implementing PCA
+
+# the principal component loadings vector
+pr.out$rotation
+
+# the principal component scores per observations and colomns
+pr.out$x
+
+# biplot with the first two principal components
+# the scale=0 argument ensures that the arrows are scaled to represent the loadings
+biplot(pr.out, scale=0)
+biplot(pr.out, scale=1) # default setting
+
+# make a sign change
+# => the principal components are only unique up to a sign change
+pr.out$rotation <- -pr.out$rotation
+pr.out$x <- -pr.out$x
+biplot(pr.out, scale=0)
+
+
+# the standard deviation of each principal component
+pr.out$sdev
+
+# the variance explained by each component(PVE) is obtained by squaring these
+pr.var <- pr.out$sdev^2
+pr.var
+
+pve <- pr.var/sum(pr.var)
+pve
+
+# 1st PC's PVE : 0.62
+2.48/(2.48+0.99+0.36+0.17) 
+
+
+# plot the PVE explained by each component
+plot(pve, 
+     xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained(PVE", 
+     ylim = c(0, 1), 
+     type = 'b')
+
+# plot the cummulative PVE
+plot(cumsum(pve), 
+     xlab = "Principal Component", 
+     ylab = "Cummulative Proportion of Variance Explained", 
+     ylim = c(0, 1), 
+     type = 'b')
