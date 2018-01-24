@@ -1,0 +1,105 @@
+##----------------------------------------------------
+## Clustering
+## - source : An Introduction to Statistical Learning
+##----------------------------------------------------
+
+#----------
+# (1) K-means Clustering
+
+# make a simulated dataset
+set.seed(1) # for reproducibility
+x <- matrix(rnorm(50*2), ncol = 2)
+x
+
+# shift a mean of 25 observations relative to the next 25 observations
+x[1:25, 1] <- x[1:25, 1] + 3
+x[1:25, 2] <- x[1:25, 2] - 4
+
+plot(x)
+
+#-----
+# (1-1) perform K-means clustering with K=2 using kmeans() function
+km.out <- kmeans(x, 2, nstart = 20)
+
+# summary
+km.out
+
+# attributes of km.out
+names(km.out)
+
+# the cluster assignments of the 50 observations
+km.out$cluster
+
+# plot the data with each observations colored according to its cluster assignment
+plot(x, 
+     col = (km.out$cluster + 1), 
+     main = "K-means Clustering Results with K=2", 
+     xlab = "var1", 
+     ylab = "var2", 
+     pch = 20, 
+     cex = 2)
+
+#-----
+# (1-2) perform K-means clustering with K=3
+set.seed(1) # for reproducibility
+km.out.3 <- kmeans(x, 3, nstart = 20) # nstart argement: multiple initial cluster assignments
+km.out.3
+
+# plot the data with each observations colored according to its cluster assignment
+plot(x, 
+     col = (km.out.3$cluster + 1), 
+     main = "K-means Clustering with K=3", 
+     xlab = "var1", 
+     ylab = "var2", 
+     pch = 20, 
+     cex = 2)
+
+# nstart argument : multiple initial cluster assignments
+# => Run K-means clustering with a large value of nstart, such as 20 or 50
+# since otherwise an undesirable local optimum may be obtained
+set.seed(3) # for reproducibility
+
+km.out.nstart.1 <- kmeans(x, 3, nstart = 1)
+km.out.nstart.1$tot.withinss # total within-cluster sum of squares
+
+km.out.nstart.20 <- kmeans(x, 3, nstart = 20)
+km.out.nstart.20$tot.withinss # total within-cluster sum of squares
+
+
+#----------
+# (2) Hierarchical Clustering
+
+# compute the 50 x 50 inter-observation Euclidean distance matrix using dist() after standardization
+dist(scale(x), method = "euclidean") # method: "euclidean", "manhattan", "minkowski"
+
+# Hierarchical Clustering using complete, average, and single linkage 
+# with Euclidean distance as the dissimilarity measure
+hc.complete <- hclust(dist(scale(x), method = "euclidean"), method = "complete")
+hc.average <- hclust(dist(scale(x)), method = "average")
+hc.single <- hclust(dist(scale(x)), method = "single")
+
+# dendrogram plot
+par(mfrow = c(1,3))
+plot(hc.complete, main = "Complete Linkage", xlab = "", sub = "", cex = 0.9)
+plot(hc.average, main = "Average Linkage", xlab = "", sub = "", cex = 0.9)
+plot(hc.single, main = "Single Linkage", xlab = "", sub = "", cex = 0.9)
+
+# determine the cluster labels for each observation associated with a given cut of the dendrogram using cutree()
+cutree(hc.complete, 2)
+cutree(hc.average, 2)
+cutree(hc.single, 2)
+cutree(hc.single, 4) # a more sensible answer
+
+#-----
+# (3) Correlation-based Clustering
+# correlation-based distance using as.dist()
+x.col.3 <- matrix(rnorm(30*3), ncol = 3)
+dist.cor <- as.dist(1 - cor(t(x.col.3)))
+cor(t(x.col.3))
+
+# perform hierarchical clustering with correlation-based distance
+hc.complete.dist.cor <- hclust(dist.cor, method = "complete")
+plot(hc.complete.dist.cor, 
+     main = "Complete Linkage with Correlation-based Distance", 
+     xlab = "", 
+     sub = "")
