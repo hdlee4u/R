@@ -13,7 +13,7 @@ bin_range <- 3 # successive '0's criterion
 vec_idx <- 1
 vec_num <- 1
 
-# User Defined Function for Zero_Bin_Splitter
+# Zero_Bin_Splitter
 while (length(vec) > 0){
   if (sum(vec[1:bin_range], na.rm=T) != 0){
     vec_tmp[vec_idx] <- vec[1]
