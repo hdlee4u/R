@@ -1,0 +1,39 @@
+##---------------------------------------------
+# Vector Bin Split by successive '0's criteria
+##---------------------------------------------
+rm(list=ls()) # clean all
+
+# Sample vector
+set.seed(123)
+vec_raw <- sample(c(0, 1), size=30, replace=TRUE, prob=(c(0.8, 0.2)))
+vec_raw
+vec <- vec_raw # copy for manipulation
+vec_tmp <- c() # null vector
+bin_range <- 3 # successive '0's criterion
+vec_idx <- 1
+vec_num <- 1
+
+# User Defined Function for Zero_Bin_Splitter
+while (length(vec) > 0){
+  if (sum(vec[1:bin_range], na.rm=T) != 0){
+    vec_tmp[vec_idx] <- vec[1]
+    vec <- vec[-1]
+    vec_idx <- vec_idx + 1
+  } else if (is.null(vec_tmp)){
+    assign(paste0("vec_split_", vec_num), vec[1:bin_range])
+    vec <- vec[-(1:bin_range)]
+    vec_idx <- 1 # initialization
+    vec_num <- vec_num + 1
+  } else {
+    assign(paste0("vec_split_", vec_num), vec_tmp)
+    vec_tmp <- c() # initialization
+    vec_num <- vec_num + 1
+    assign(paste0("vec_split_", vec_num), vec[1:bin_range])
+    vec <- vec[-(1:bin_range)]
+    vec_idx <- 1 # initialization
+    vec_num <- vec_num + 1
+  }
+}
+
+# delete temp vector and arguments
+rm(vec, vec_tmp, bin_range, vec_idx, vec_num) 
