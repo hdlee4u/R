@@ -1,5 +1,5 @@
 # R
 R codes
 
-## Data Manipulation using R
+## Data Manipulation & Predictive Modeling using R
 - Format number as fixed width, with leading zeros : sprintf()
